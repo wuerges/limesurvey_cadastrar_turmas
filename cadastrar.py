@@ -1,5 +1,6 @@
 import pandas as pd
 import typer
+import json
 from pathlib import Path
 
 
@@ -22,9 +23,6 @@ class Estudante:
     def email(self):
         return self.line.email
 
-    def disciplina(self):
-        return self.line.disciplina
-
     def limesurvey(self):
         n = self.line.nome_estudante.strip().split()
         last = n[-1]
@@ -32,11 +30,28 @@ class Estudante:
 
         return {"email": self.line.email,"lastname":last,"firstname": first}
 
+class Turma:
+    def __init__(self, key, data):
+        (codigo, self.nome, docentes) = key
+        self.codigo = int(codigo)
+        self.data = data
+        self.estudantes = [Estudante(e) for i, e in self.data.iterrows()]
+        self.docentes = [d.strip() for d in docentes.split(";")]
+
+    def __iter__(self):
+        return self.estudantes.__iter__()
+
+    def json(self):
+        estudantes = [e.limesurvey() for e in self.estudantes]
+        return {'nome': self.nome, 'docentes': self.docentes, 'codigo':self.codigo, 'estudantes': estudantes }
+
+
 
 def load_students(path: Path, curso):
     data = pd.read_csv(path, sep=";")
     data = filtra_curso(data, curso)
     data = filtra_ativos(data)
+    data = data[["nome_estudante", "email"]].drop_duplicates()
     students = []
     for _, l in data.iterrows():
         students.append(Estudante(l))
@@ -46,47 +61,30 @@ def load_turmas(path: Path, curso):
     data = pd.read_csv(path, sep=";")
     data = filtra_curso(data, curso)
     data = filtra_ativos(data)
+    groups = data.groupby(['codigo_turma', 'disciplina', 'docentes'])
 
-    print(data.columns)
+    turmas = [Turma(k, groups.get_group(k)) for k,_ in groups]
 
-    data = data.groupby(['codigo_turma', 'disciplina'])
-
-    return data
+    return turmas
     
 
 
-def main(dataset: Path, curso: str):
+def main(dataset: Path, curso: str, comando: str):
 
-    data = load_students(dataset, curso)
+    # data = load_students(dataset, curso)
 
-    turmas = load_turmas(dataset, curso)
-    typer.echo(f"Turmas: {len(turmas)}")
+    if comando == "estudantes":
+        estudantes = load_students(dataset, curso)    
+        for e in estudantes:
+            typer.echo(json.dumps(e.limesurvey()))
 
-    for k,v in turmas:
-        g = turmas.get_group(k)
-        disc = g['disciplina']
-        doc = g['docentes']
-        # typer.echo(turmas.get_group(k))
-        typer.echo(disc)
-        typer.echo(doc)
-    # typer.echo(data['descricao_turma'].unique())
-    # typer.echo(data.describe())
-    # typer.echo(data)
+    elif comando == "turmas":
 
-    for i, e in enumerate(data):
-        if i > 10: break
+        turmas = load_turmas(dataset, curso)
 
-        typer.echo(f"Est: {e.nome()} {e.limesurvey()}")
-
-
-    # data.group_by([''])
-
-    # for i, l in data.iterrows():
-    #     # if i > 10: break
-
-    #     e = Estudante(l)
-    #     typer.echo(f"Est({i}): {e.nome()} ({e.email()}) -> {e.disciplina()} ({e.line.codigo_turma})")
-    #     break
+        for t in turmas:
+            typer.echo(json.dumps(t.json()))
+            # typer.echo(t.json())
 
 
 if __name__ == "__main__":
