@@ -65,32 +65,78 @@ class LimeClient:
 # from jsonrpcclient.clients.http_client import HTTPClient
 
 
-def main(dataset: Path, curso: str):
+app = typer.Typer()
 
-    your_domain = "localhost"
-    your_limesurvey_dir = "limesurvey/limesurvey"
-    url = f"http://{your_domain}/{your_limesurvey_dir}/index.php/admin/remotecontrol"
-
-    data = cadastrar.load_students(dataset, curso)
-
+@app.command()
+def check(url: str, dataset: Path, curso: str):
+    # url = "http://localhost/limesurvey/index.php/admin/remotecontrol"
     client = LimeClient(url)
 
-    k = client.get_session_key("admin", "admin")
+    k = client.get_session_key("admin", "password")
     typer.echo(k)
-
-    r = client.copy_survey(
-        k, 683333, "Auto-avaliação do Curso de Ciência da Computação da UFFS - Chapecó (Cópia 2)")
-    typer.echo(r)
-    newsid = r['newsid']
-
-    typer.echo(client.activate_tokens(k, newsid, []))
-
-    ps = client.add_participants(
-        k, newsid, [e.limesurvey() for e in data], True)
-    typer.echo(ps)
-
     typer.echo(client.release_session_key(k))
 
 
+
+@app.command()
+def geral(url: str, dataset: Path, curso: str, modelo: int, nome: str):
+    # url = "http://localhost/limesurvey/index.php/admin/remotecontrol"
+    client = LimeClient(url)
+
+    k = client.get_session_key("admin", "password")
+    estudantes = cadastrar.load_students(dataset, curso)
+    estudantes = [e.limesurvey() for e in estudantes]
+
+    r = client.copy_survey(
+        k,
+        modelo,
+        nome
+    )
+
+    typer.echo("Created a new survey")
+    newsid = r['newsid']
+
+    client.activate_tokens(k, newsid, [])
+    typer.echo("Created survey user table")
+
+    client.add_participants(
+         k, newsid, estudantes, True)
+
+    typer.echo("Added participants to survey")
+
+
+
+@app.command()
+def turmas(url: str, dataset: Path, curso: str, modelo: int, padrao: str):
+    # url = "http://localhost/limesurvey/index.php/admin/remotecontrol"
+    client = LimeClient(url)
+
+    k = client.get_session_key("admin", "password")
+
+    turmas = cadastrar.load_turmas(dataset, curso)
+
+    for t in turmas:
+
+        nome_formulario = padrao.format(t.codigo, t.nome)
+        estudantes = [e.limesurvey() for e in t.estudantes]
+        # typer.echo(nome_formulario)
+        
+
+        r = client.copy_survey(
+            k,
+            modelo,
+            nome_formulario
+        )
+
+        newsid = r['newsid']
+        client.activate_tokens(k, newsid, [])
+
+        client.add_participants(
+            k, newsid, estudantes, True)
+
+        typer.echo(f"Created survey for: {nome_formulario}")
+
+
+
 if __name__ == "__main__":
-    typer.run(main)
+    app()
