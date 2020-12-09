@@ -69,7 +69,7 @@ app = typer.Typer()
 def check(dataset: Path, curso: str):
     client = LimeClient(config.URL)
 
-    k = client.get_session_key("admin", "password")
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
     typer.echo(k)
     typer.echo(client.release_session_key(k))
 
@@ -79,7 +79,7 @@ def check(dataset: Path, curso: str):
 def geral(dataset: Path, curso: str, modelo: int, nome: str):
     client = LimeClient(config.URL)
 
-    k = client.get_session_key("admin", "password")
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
     estudantes = cadastrar.load_students(dataset, curso)
     estudantes = [e.limesurvey() for e in estudantes]
 
@@ -106,7 +106,7 @@ def geral(dataset: Path, curso: str, modelo: int, nome: str):
 def turmas(dataset: Path, curso: str, modelo: int, padrao: str):
     client = LimeClient(config.URL)
 
-    k = client.get_session_key("admin", "password")
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
 
     turmas = cadastrar.load_turmas(dataset, curso)
 
