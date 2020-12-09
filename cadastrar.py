@@ -32,9 +32,10 @@ class Estudante:
 
 class Turma:
     def __init__(self, key, data):
-        (codigo, self.nome, docentes) = key
-        self.codigo = int(codigo)
         self.data = data
+        self.codigo = int(key)
+        docentes = self.data['docentes'].iloc[0].strip()
+        self.nome = self.data['disciplina'].iloc[0].strip()
         self.estudantes = [Estudante(e) for i, e in self.data.iterrows()]
         self.docentes = [d.strip() for d in docentes.split(";")]
 
@@ -44,6 +45,7 @@ class Turma:
     def json(self):
         estudantes = [e.limesurvey() for e in self.estudantes]
         return {'nome': self.nome, 'docentes': self.docentes, 'codigo':self.codigo, 'estudantes': estudantes }
+
 
 
 
@@ -61,31 +63,29 @@ def load_turmas(path: Path, curso):
     data = pd.read_csv(path, sep=";")
     data = filtra_curso(data, curso)
     data = filtra_ativos(data)
-    groups = data.groupby(['codigo_turma', 'disciplina', 'docentes'])
+    groups = data.groupby(['codigo_turma'])
 
     turmas = [Turma(k, groups.get_group(k)) for k,_ in groups]
 
     return turmas
     
 
+app = typer.Typer()
 
-def main(dataset: Path, curso: str, comando: str):
+@app.command()
+def turmas(dataset: Path, curso: str):
+    turmas = load_turmas(dataset, curso)
+    for t in turmas:
+        typer.echo((t.codigo, t.nome, t.docentes))
 
-    # data = load_students(dataset, curso)
 
-    if comando == "estudantes":
-        estudantes = load_students(dataset, curso)    
-        for e in estudantes:
-            typer.echo(json.dumps(e.limesurvey()))
+@app.command()
+def estudantes(dataset: Path, curso: str):
 
-    elif comando == "turmas":
-
-        turmas = load_turmas(dataset, curso)
-
-        for t in turmas:
-            typer.echo(json.dumps(t.json()))
-            # typer.echo(t.json())
+    estudantes = load_students(dataset, curso)    
+    for e in estudantes:
+        typer.echo(json.dumps(e.limesurvey()))
 
 
 if __name__ == "__main__":
-    typer.run(main)
+    app()
