@@ -3,11 +3,9 @@ import json
 import typer
 import inspect
 import cadastrar
+import config
 from pathlib import Path
 
-your_domain = "localhost"
-your_limesurvey_dir = "limesurvey/limesurvey"
-url = f"http://{your_domain}/{your_limesurvey_dir}/index.php/admin/remotecontrol"
 
 
 def client(func):
@@ -68,9 +66,8 @@ class LimeClient:
 app = typer.Typer()
 
 @app.command()
-def check(url: str, dataset: Path, curso: str):
-    # url = "http://localhost/limesurvey/index.php/admin/remotecontrol"
-    client = LimeClient(url)
+def check(dataset: Path, curso: str):
+    client = LimeClient(config.URL)
 
     k = client.get_session_key("admin", "password")
     typer.echo(k)
@@ -79,9 +76,8 @@ def check(url: str, dataset: Path, curso: str):
 
 
 @app.command()
-def geral(url: str, dataset: Path, curso: str, modelo: int, nome: str):
-    # url = "http://localhost/limesurvey/index.php/admin/remotecontrol"
-    client = LimeClient(url)
+def geral(dataset: Path, curso: str, modelo: int, nome: str):
+    client = LimeClient(config.URL)
 
     k = client.get_session_key("admin", "password")
     estudantes = cadastrar.load_students(dataset, curso)
@@ -107,9 +103,8 @@ def geral(url: str, dataset: Path, curso: str, modelo: int, nome: str):
 
 
 @app.command()
-def turmas(url: str, dataset: Path, curso: str, modelo: int, padrao: str):
-    # url = "http://localhost/limesurvey/index.php/admin/remotecontrol"
-    client = LimeClient(url)
+def turmas(dataset: Path, curso: str, modelo: int, padrao: str):
+    client = LimeClient(config.URL)
 
     k = client.get_session_key("admin", "password")
 
@@ -120,7 +115,7 @@ def turmas(url: str, dataset: Path, curso: str, modelo: int, padrao: str):
         nome_formulario = padrao.format(t.codigo, t.nome)
         estudantes = [e.limesurvey() for e in t.estudantes]
         # typer.echo(nome_formulario)
-        
+
 
         r = client.copy_survey(
             k,
