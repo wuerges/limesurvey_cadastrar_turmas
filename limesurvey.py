@@ -22,8 +22,9 @@ class Survey:
 def client(func):
     def wrap(self, *params, **kwargs):
         payload = {'method': func.__name__, 'params': params, 'id': 1}
-
-        return requests.post(self.url, json=payload).json()['result']
+        r = requests.post(self.url, json=payload)
+        # print(r.headers)
+        return r.json()['result']
     return wrap
 
 
