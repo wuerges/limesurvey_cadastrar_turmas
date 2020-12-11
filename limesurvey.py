@@ -7,6 +7,17 @@ import config
 from pathlib import Path
 
 
+def from_YN(t):
+    x = {'Y': True, 'N': False}
+    return x[t]
+
+class Survey:
+    def __init__(self, data):
+        #{'sid': 141771, 'surveyls_title': '2020/1 (remoto) - Turma#27481: Banco de dados I', 'startdate': None, 'expires': None, 'active': 'N'}
+        self.sid = data['sid']
+        self.title = data['surveyls_title']
+        self.active = from_YN(data['active'])
+
 
 def client(func):
     def wrap(self, *params, **kwargs):
@@ -60,7 +71,34 @@ class LimeClient:
     def activate_tokens(self, sSessionKey, iSurveyID, aAttributeFields):
         pass
 
-# from jsonrpcclient.clients.http_client import HTTPClient
+    @client
+    def list_surveys(self, sSessionKey, logis):
+        pass
+
+    @client
+    def activate_survey(self, sSessionKey, sSurveyID):
+        pass
+
+#/**
+#* Invite participants in a survey (RPC function)
+#*
+#* Returns array of results of sending
+#*
+#* @access public
+#* @param string $sSessionKey Auth credentials
+#* @param int $iSurveyID ID of the survey that participants belong
+#* @param array $aTokenIds Ids of the participant to invite
+#* @param bool $bEmail Send only pending invites (TRUE) or resend invites only (FALSE)
+#* @return array Result of the action
+#*/
+    @client
+    def invite_participants(self, sSessionKey, iSurevyID, aTokenIds, bEmail):
+        pass
+    
+
+    @client
+    def mail_registered_participants(self, sSessionKey, iSurveyID, conditions):
+        pass
 
 
 app = typer.Typer()
@@ -130,6 +168,43 @@ def turmas(dataset: Path, curso: str, modelo: int, padrao: str):
             k, newsid, estudantes, True)
 
         typer.echo(f"Created survey for: {nome_formulario}")
+
+
+@app.command()
+def listar():
+    client = LimeClient(config.URL)
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
+    s = client.list_surveys(k, config.LOGIN)
+    s = [Survey(si) for si in s]
+
+    typer.echo(s)
+
+@app.command()
+def ativartodos():
+    client = LimeClient(config.URL)
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
+    s = client.list_surveys(k, config.LOGIN)
+    s = [Survey(si) for si in s]
+
+    for si in s:
+        if not si.active:
+            client.activate_survey(k, si.sid)
+            typer.echo(f"activated survey {si.title}")
+
+
+@app.command()
+def enviaremailregistrados():
+    client = LimeClient(config.URL)
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
+    s = client.list_surveys(k, config.LOGIN)
+    s = [Survey(si) for si in s]
+
+    for si in s:
+        if si.active:
+            typer.echo(f"Survey: {si.sid}")
+            r = client.mail_registered_participants(k, si.sid)
+            typer.echo(f"result: {r}")
+
 
 
 
