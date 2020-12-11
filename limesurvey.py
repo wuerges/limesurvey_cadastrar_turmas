@@ -11,9 +11,10 @@ def from_YN(t):
     x = {'Y': True, 'N': False}
     return x[t]
 
+
 class Survey:
     def __init__(self, data):
-        #{'sid': 141771, 'surveyls_title': '2020/1 (remoto) - Turma#27481: Banco de dados I', 'startdate': None, 'expires': None, 'active': 'N'}
+        # {'sid': 141771, 'surveyls_title': '2020/1 (remoto) - Turma#27481: Banco de dados I', 'startdate': None, 'expires': None, 'active': 'N'}
         self.sid = data['sid']
         self.title = data['surveyls_title']
         self.active = from_YN(data['active'])
@@ -80,29 +81,33 @@ class LimeClient:
     def activate_survey(self, sSessionKey, sSurveyID):
         pass
 
-#/**
-#* Invite participants in a survey (RPC function)
-#*
-#* Returns array of results of sending
-#*
-#* @access public
-#* @param string $sSessionKey Auth credentials
-#* @param int $iSurveyID ID of the survey that participants belong
-#* @param array $aTokenIds Ids of the participant to invite
-#* @param bool $bEmail Send only pending invites (TRUE) or resend invites only (FALSE)
-#* @return array Result of the action
-#*/
+# /**
+# * Invite participants in a survey (RPC function)
+# *
+# * Returns array of results of sending
+# *
+# * @access public
+# * @param string $sSessionKey Auth credentials
+# * @param int $iSurveyID ID of the survey that participants belong
+# * @param array $aTokenIds Ids of the participant to invite
+# * @param bool $bEmail Send only pending invites (TRUE) or resend invites only (FALSE)
+# * @return array Result of the action
+# */
     @client
     def invite_participants(self, sSessionKey, iSurevyID, aTokenIds, bEmail):
         pass
-    
 
     @client
     def mail_registered_participants(self, sSessionKey, iSurveyID, conditions):
         pass
 
+    @client
+    def remind_participants(self, sSessionKey, iSurveyID):
+        pass
+
 
 app = typer.Typer()
+
 
 @app.command()
 def check(dataset: Path, curso: str):
@@ -111,7 +116,6 @@ def check(dataset: Path, curso: str):
     k = client.get_session_key(config.LOGIN, config.PASSWORD)
     typer.echo(k)
     typer.echo(client.release_session_key(k))
-
 
 
 @app.command()
@@ -135,10 +139,9 @@ def geral(dataset: Path, curso: str, modelo: int, nome: str):
     typer.echo("Created survey user table")
 
     client.add_participants(
-         k, newsid, estudantes, True)
+        k, newsid, estudantes, True)
 
     typer.echo("Added participants to survey")
-
 
 
 @app.command()
@@ -154,7 +157,6 @@ def turmas(dataset: Path, curso: str, modelo: int, padrao: str):
         nome_formulario = padrao.format(t.codigo, t.nome)
         estudantes = [e.limesurvey() for e in t.estudantes]
         # typer.echo(nome_formulario)
-
 
         r = client.copy_survey(
             k,
@@ -180,6 +182,7 @@ def listar():
 
     typer.echo(s)
 
+
 @app.command()
 def ativartodos():
     client = LimeClient(config.URL)
@@ -203,10 +206,22 @@ def enviaremailregistrados():
     for si in s:
         if si.active:
             typer.echo(f"Survey: {si.sid}")
-            r = client.mail_registered_participants(k, si.sid)
+            r = client.mail_registered_participants(k, si.sid, [])
             typer.echo(f"result: {r}")
 
 
+@app.command()
+def enviarlembretes():
+    client = LimeClient(config.URL)
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
+    s = client.list_surveys(k, config.LOGIN)
+    s = [Survey(si) for si in s]
+
+    for si in s:
+        if si.active:
+            typer.echo(f"Survey: {si.sid}")
+            r = client.remind_participants(k, si.sid)
+            typer.echo(f"result: {r}")
 
 
 if __name__ == "__main__":
