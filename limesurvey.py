@@ -5,6 +5,7 @@ import inspect
 import cadastrar
 import config
 from pathlib import Path
+from typing import Optional
 
 
 def from_YN(t):
@@ -18,6 +19,15 @@ class Survey:
         self.sid = data['sid']
         self.title = data['surveyls_title']
         self.active = from_YN(data['active'])
+        self.data = data
+        self.properties = None
+
+    def __repr__(self):
+        return f"Survey({self.data})"
+
+    def load_properties(self, client, k):        
+        self.properties = client.get_survey_properties(k, self.sid)
+        self.gsid = int(self.properties['gsid'])
 
 
 def client(func):
@@ -81,6 +91,10 @@ class LimeClient:
     def activate_survey(self, sSessionKey, sSurveyID):
         pass
 
+    @client
+    def get_survey_properties(self, sSessionKey, iSurveyID):
+        pass
+
 # /**
 # * Invite participants in a survey (RPC function)
 # *
@@ -103,6 +117,10 @@ class LimeClient:
 
     @client
     def remind_participants(self, sSessionKey, iSurveyID):
+        pass
+
+    @client
+    def get_group_properties(self, iGroupID, aGroupSettings):
         pass
 
 
@@ -174,13 +192,21 @@ def turmas(dataset: Path, curso: str, modelo: int, padrao: str):
 
 
 @app.command()
-def listar():
+def listar(gsid : Optional[int] = typer.Argument(None)): # pylint: disable=unsubscriptable-object
     client = LimeClient(config.URL)
     k = client.get_session_key(config.LOGIN, config.PASSWORD)
     s = client.list_surveys(k, config.LOGIN)
     s = [Survey(si) for si in s]
 
-    typer.echo(s)
+    for si in s:
+        si.load_properties(client, k)
+        if gsid:
+            if gsid == si.gsid:
+                typer.echo(si)
+        else:
+            typer.echo(si)
+        # typer.echo(si.gsid)
+        # typer.echo(p)
 
 
 @app.command()
@@ -192,6 +218,19 @@ def ativartodos():
 
     for si in s:
         if not si.active:
+            client.activate_survey(k, si.sid)
+            typer.echo(f"activated survey {si.title}")
+
+@app.command()
+def ativargrupo(gsid : int):
+    client = LimeClient(config.URL)
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
+    s = client.list_surveys(k, config.LOGIN)
+    s = [Survey(si) for si in s]
+
+    for si in s:
+        si.load_properties(client, k)
+        if not si.active and si.gsid == gsid:
             client.activate_survey(k, si.sid)
             typer.echo(f"activated survey {si.title}")
 
@@ -211,14 +250,16 @@ def enviaremailregistrados():
 
 
 @app.command()
-def enviarlembretes():
+def enviarlembretes(gsid : int):
     client = LimeClient(config.URL)
     k = client.get_session_key(config.LOGIN, config.PASSWORD)
     s = client.list_surveys(k, config.LOGIN)
     s = [Survey(si) for si in s]
 
     for si in s:
-        if si.active:
+        si.load_properties(client, k)
+        if si.active and si.gsid == gsid:
+
             typer.echo(f"Survey: {si.sid}")
             r = client.remind_participants(k, si.sid)
             typer.echo(f"result: {r}")
