@@ -5,6 +5,7 @@ import typer
 import inspect
 import cadastrar
 import config
+import pandas as pd
 from pathlib import Path
 from typing import Optional
 
@@ -317,8 +318,55 @@ def respostas_turma():
         # else:
         #     typer.echo(f"Impossivel carregar estatistica da turma: {surv.title}")
 
+@app.command()
+def respostas_pandas(outfile: Path):
+    import urllib
+    from io import BytesIO
+
+    client = LimeClient(config.URL)
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
+    s = client.list_surveys(k, config.LOGIN)
+    surveys = [Survey(si) for si in s]
+
+    frames = []
+
+    for surv in surveys:
+        stats = client.export_responses(k, surv.sid, "csv")
+
+        if stats:
+            typer.echo(f"Carregada estatistica da turma: {surv.title}")
+
+            try: 
+                data = base64.b64decode(stats)
+                typer.echo(f"Decoded data.")
+
+                frame = pd.read_csv(BytesIO(data), encoding="utf8", sep=";")
+                frame["turma"] = surv.title
+
+                typer.echo(f"Loaded in Pandas")
+
+                frames.append(frame)
+
+                typer.echo(f"Concated dataframes")
 
 
+            except:
+                typer.echo(f"                 Error: Could not parse data.")
+
+
+            # typer.echo(f"Data: {data}")
+
+        #     # with open(filename, "wb") as out:
+        #     #     out.write(data)
+
+        #     typer.echo(f"Salva estatistica da turma: {filename}")
+        # else:
+        #     typer.echo(f"Impossivel carregar estatistica da turma: {surv.title}")
+
+
+    result = pd.concat(frames)
+    result.to_csv(outfile)
+    typer.echo(f"Stored result in {outfile}")
 
 @app.command()
 def enviarlembretes(gsid : int):
