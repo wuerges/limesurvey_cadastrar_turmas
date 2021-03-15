@@ -124,14 +124,13 @@ class LimeClient:
     def get_group_properties(self, iGroupID, aGroupSettings):
         pass
 
-#    @client
-#    def export_statistics(self, sSessionKey, iSurveyID, docType="pdf", sLanguage, graph, groupIDs):
-#        pass
-
     @client
-    def export_statistics(self, sSessionKey, iSurveyID, docType="pdf"):
+    def export_statistics(self, sSessionKey, iSurveyID, docType, sLanguage, graph):
         pass
 
+    @client
+    def export_responses(self, sSessionKey, iSurveyID, docType):
+        pass
 
 app = typer.Typer()
 
@@ -259,16 +258,66 @@ def enviaremailregistrados():
 
 
 @app.command()
-def estatistica_turma(sid : int, output: Path):
+def estatistica_turma():
+    import urllib
     client = LimeClient(config.URL)
     k = client.get_session_key(config.LOGIN, config.PASSWORD)
-    typer.echo(f"Procurando estatisticas da turma {sid}")
-    stats = client.export_statistics(k, sid)
-    
-    with open(output, "wb") as out:
-        out.write(base64.b64decode(stats))
-    
-    typer.echo(f"Estatisticas escritas geradas no arquivo {output}")
+    s = client.list_surveys(k, config.LOGIN)
+    surveys = [Survey(si) for si in s]
+
+    for surv in surveys:
+        stats = client.export_statistics(k, surv.sid, "xls", 0, "yes")
+
+        if stats:
+            typer.echo(f"Carregada estatistica da turma: {surv.title}")
+
+            filename = urllib.parse.quote_plus(surv.title)
+            data = base64.b64decode(stats)
+
+            with open(filename, "wb") as out:
+                out.write(data)
+
+            typer.echo(f"Salva estatistica da turma: {filename}")
+        else:
+            typer.echo(f"Impossivel carregar estatistica da turma: {surv.title}")
+
+@app.command()
+def respostas_turma():
+    import urllib
+    client = LimeClient(config.URL)
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
+    s = client.list_surveys(k, config.LOGIN)
+    surveys = [Survey(si) for si in s]
+
+    for surv in surveys:
+        stats = client.export_responses(k, surv.sid, "csv")
+
+        if stats:
+            typer.echo(f"Carregada estatistica da turma: {surv.title}")
+
+            filename = urllib.parse.quote_plus(surv.title)
+
+            try: 
+                data = base64.b64decode(stats)
+                typer.echo(f"Decoded data.")
+                with open(filename, "wb") as out:
+                    out.write(data)
+                typer.echo(f"Saved data to file: {filename}")
+
+            except:
+                typer.echo(f"Could not parse data.")
+
+
+            # typer.echo(f"Data: {data}")
+
+        #     # with open(filename, "wb") as out:
+        #     #     out.write(data)
+
+        #     typer.echo(f"Salva estatistica da turma: {filename}")
+        # else:
+        #     typer.echo(f"Impossivel carregar estatistica da turma: {surv.title}")
+
+
 
 
 @app.command()
