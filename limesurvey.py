@@ -1,4 +1,5 @@
 import requests
+import base64
 import json
 import typer
 import inspect
@@ -121,6 +122,14 @@ class LimeClient:
 
     @client
     def get_group_properties(self, iGroupID, aGroupSettings):
+        pass
+
+#    @client
+#    def export_statistics(self, sSessionKey, iSurveyID, docType="pdf", sLanguage, graph, groupIDs):
+#        pass
+
+    @client
+    def export_statistics(self, sSessionKey, iSurveyID, docType="pdf"):
         pass
 
 
@@ -247,6 +256,19 @@ def enviaremailregistrados():
             typer.echo(f"Survey: {si.sid}")
             r = client.mail_registered_participants(k, si.sid, [])
             typer.echo(f"result: {r}")
+
+
+@app.command()
+def estatistica_turma(sid : int, output: Path):
+    client = LimeClient(config.URL)
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
+    typer.echo(f"Procurando estatisticas da turma {sid}")
+    stats = client.export_statistics(k, sid)
+    
+    with open(output, "wb") as out:
+        out.write(base64.b64decode(stats))
+    
+    typer.echo(f"Estatisticas escritas geradas no arquivo {output}")
 
 
 @app.command()
