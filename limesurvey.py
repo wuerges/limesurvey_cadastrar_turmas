@@ -130,8 +130,13 @@ class LimeClient:
         pass
 
     @client
-    def export_responses(self, sSessionKey, iSurveyID, docType):
+    def export_responses(self, sSessionKey, iSurveyID, docType, lang, completStatus, headingType, responseType):
         pass
+
+    @client
+    def list_questions(self, sSessionKey, iSurveyID): 
+        pass
+
 
 app = typer.Typer()
 
@@ -283,6 +288,23 @@ def estatistica_turma():
             typer.echo(f"Impossivel carregar estatistica da turma: {surv.title}")
 
 @app.command()
+def survey_questions(json_outfile : Path):
+    client = LimeClient(config.URL)
+    k = client.get_session_key(config.LOGIN, config.PASSWORD)
+    s = client.list_surveys(k, config.LOGIN)
+
+    surveys = [Survey(si) for si in s]
+
+    questions = []
+    for surv in surveys:
+        questions.extend(client.list_questions(k, surv.sid))
+    
+    with open(json_outfile, 'wb') as file:
+        file.write(json.dumps(questions).encode('utf8'))
+
+        typer.echo(f"Generated JSON file with questions: {json_outfile}")
+
+@app.command()
 def respostas_turma():
     import urllib
     client = LimeClient(config.URL)
@@ -291,7 +313,7 @@ def respostas_turma():
     surveys = [Survey(si) for si in s]
 
     for surv in surveys:
-        stats = client.export_responses(k, surv.sid, "csv")
+        stats = client.export_responses(k, surv.sid, "csv", 0, "all", "full", "long")
 
         if stats:
             typer.echo(f"Carregada estatistica da turma: {surv.title}")
